@@ -1,12 +1,21 @@
 
+from collections import Counter
 from collections.abc import Mapping
 import heapq
 
 
-
 # extra methods to tack on to set to make it "act" like a list.
-extra_methods = {"append": lambda self, value: self.add(value),
-                 "extend": lambda self, sequence: self.update(set(sequence))}
+extra_set_methods = {"append": lambda self, value: self.add(value),
+                     "extend": lambda self, sequence: self.update(set(sequence))}
+
+
+def counter_append(self, value):
+    self[value] += 1
+
+
+# extra methods to tack on to Mapping to make it "act" like a list.
+extra_counter_methods = {"append": counter_append,
+                         "extend": lambda self, sequence: self.update(sequence)}
 
 
 class Grouping(dict):
@@ -53,7 +62,11 @@ class Grouping(dict):
         elif hasattr(collection, "add") and hasattr(collection, "update"):
             # this is very kludgy -- adding append and extend methods to a
             # set or set-like object
-            self.collection = type("appendset", (set,), extra_methods)
+            self.collection = type("appendset", (set,), extra_set_methods)
+        # Counter is special
+        elif issubclass(collection, Counter):
+            # has an update, doesn't have an add -- a counter-like?
+            self.collection = type("appendcounter", (Counter,), extra_counter_methods)
         else:
             raise TypeError("collection has to be a MutableSequence or set-like object")
         super().__init__()

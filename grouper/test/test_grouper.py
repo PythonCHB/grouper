@@ -6,6 +6,7 @@ test code for grouper class
 """
 
 from grouper import Grouping
+from collections import Counter
 
 # example data from the mailing list.
 student_school_list = [('Fred', 'SchoolA'),
@@ -101,7 +102,7 @@ def test_most_common():
     assert common == [('a', ['A', 'a', 'A', 'A']), ('b', ['b', 'B', 'b'])]
 
 
-## You could also specify a custom "collection" type such as a set:
+# You can also specify a custom "collection" type such as a set or Counter
 def test_set_single():
     gr = Grouping(collection=set)
     gr['key'] = 5
@@ -117,9 +118,25 @@ def test_set_all_at_once():
     print(gr)
 
     assert len(gr) == 5
-    assert gr['a'] == set(('a','A'))
-    assert gr['b'] == set(('b','B'))
-    assert gr['c'] == set(('c','C'))
+    assert gr['a'] == set(('a', 'A'))
+    assert gr['b'] == set(('b', 'B'))
+    assert gr['c'] == set(('c', 'C'))
 
 
+def test_counter():
+    """
+    another option is to use a Counter as the collection type
+    """
+    data = [('key1', 1),
+            ('key2', 2),
+            ('key3', 2),
+            ('key1', 2),
+            ('key1', 2),
+            ('key1', 2),
+            ]
+    gr = Grouping(data, collection=Counter)
 
+    print(gr)
+    assert len(gr) == 3
+    assert gr['key1'][2] == 3
+    assert gr['key1'][1] == 1
