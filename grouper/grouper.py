@@ -3,6 +3,12 @@ from collections.abc import Mapping
 import heapq
 
 
+
+# extra methods to tack on to set to make it "act" like a list.
+extra_methods = {"append": lambda self, value: self.add(value),
+                 "extend": lambda self, sequence: self.update(set(sequence))}
+
+
 class Grouping(dict):
     """
     Dict subclass for grouping elements of a sequence.
@@ -35,27 +41,35 @@ class Grouping(dict):
         Grouping({'a': ['A', 'a'], 'b': ['b', 'B']})
     """
 
-    def __init__(self, iterable=()):
+    def __init__(self, iterable=(), *, collection=list):
         """
         Create a new Grouping object.
 
         :param iterable: an iterable or mapping with initial data.
 
         """
+        if hasattr(collection, "append") and hasattr(collection, "extend"):
+            self.collection = list
+        elif hasattr(collection, "add") and hasattr(collection, "update"):
+            # this is very kludgy -- adding append and extend methods to a
+            # set or set-like object
+            self.collection = type("appendset", (set,), extra_methods)
+        else:
+            raise TypeError("collection has to be a MutableSequence or set-like object")
         super().__init__()
         self.update(iterable)
 
     # Override a few dict methods
 
     def __setitem__(self, key, value):
-        self.setdefault(key, []).append(value)
+        self.setdefault(key, self.collection()).append(value)
 
     def __repr__(self):
         return f"Grouping({super().__repr__()})"
 
     @classmethod
     def fromkeys(cls, iterable, v=()):
-        return cls(dict.fromkeys(iterable, list(v)))
+        return cls(dict.fromkeys(iterable, self.collection(v)))
 
     def update(self, iterable=(), key=None):
         '''Extend groups with elements from an iterable or with
@@ -71,7 +85,7 @@ class Grouping(dict):
         '''
         if isinstance(iterable, Mapping):
             for k, g in iterable.items():
-                self.setdefault(k, []).extend(g)
+                self.setdefault(k, self.collection()).extend(g)
         else:
             for k, g in iterable:
                 self[k] = g

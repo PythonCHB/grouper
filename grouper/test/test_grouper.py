@@ -101,4 +101,25 @@ def test_most_common():
     assert common == [('a', ['A', 'a', 'A', 'A']), ('b', ['b', 'B', 'b'])]
 
 
+## You could also specify a custom "collection" type such as a set:
+def test_set_single():
+    gr = Grouping(collection=set)
+    gr['key'] = 5
+    gr['key'] = 6
+    gr['key'] = 5
+
+    assert gr['key'] == set((5,6))
+
+
+def test_set_all_at_once():
+    gr = Grouping(((c.casefold(), c) for c in 'AbBaAAbCccDe'),
+                  collection=set)
+    print(gr)
+
+    assert len(gr) == 5
+    assert gr['a'] == set(('a','A'))
+    assert gr['b'] == set(('b','B'))
+    assert gr['c'] == set(('c','C'))
+
+
 
