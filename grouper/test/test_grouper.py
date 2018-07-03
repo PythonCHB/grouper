@@ -5,8 +5,10 @@ test code for grouper class
 
 """
 
+
 from grouper import Grouping
-from collections import Counter
+
+from operator import itemgetter
 
 # example data from the mailing list.
 student_school_list = [('Fred', 'SchoolA'),
@@ -102,41 +104,29 @@ def test_most_common():
     assert common == [('a', ['A', 'a', 'A', 'A']), ('b', ['b', 'B', 'b'])]
 
 
-# You can also specify a custom "collection" type such as a set or Counter
-def test_set_single():
-    gr = Grouping(collection=set)
-    gr['key'] = 5
-    gr['key'] = 6
-    gr['key'] = 5
+# you can specify a key_fun and or value_fun instead:
+# some examples from the PEP:
+def test_names_by_first_initial():
+    names = ["Fred", "Bob", "Frank", "Mary", "Billy"]
+    gr = Grouping(names, key_fun=itemgetter(0))
 
-    assert gr['key'] == set((5,6))
-
-
-def test_set_all_at_once():
-    gr = Grouping(((c.casefold(), c) for c in 'AbBaAAbCccDe'),
-                  collection=set)
-    print(gr)
-
-    assert len(gr) == 5
-    assert gr['a'] == set(('a', 'A'))
-    assert gr['b'] == set(('b', 'B'))
-    assert gr['c'] == set(('c', 'C'))
+    assert gr == {'F': ['Fred', 'Frank'], 'B': ['Bob', 'Billy'], 'M': ['Mary']}
 
 
-def test_counter():
+def test_only_specify_value():
     """
-    another option is to use a Counter as the collection type
+    last names by first initial
     """
-    data = [('key1', 1),
-            ('key2', 2),
-            ('key3', 2),
-            ('key1', 2),
-            ('key1', 2),
-            ('key1', 2),
+    data = [("Seattle", "Cleveland", "Barker"),
+            ("Cleveland", "Oakland", "Jones"),
+            ("Cleveland", "San Jose", "Miller"),
+            ("Seattle", "Boston", "Cooper"),
+            ("San Francisco", "Atlanta", "Barker"),
             ]
-    gr = Grouping(data, collection=Counter)
+
+    gr = Grouping(data, value_fun=itemgetter(2))
 
     print(gr)
-    assert len(gr) == 3
-    assert gr['key1'][2] == 3
-    assert gr['key1'][1] == 1
+    assert gr == {'Seattle': ['Barker', 'Cooper'],
+                  'Cleveland': ['Jones', 'Miller'],
+                  'San Francisco': ['Barker']}

@@ -1,21 +1,11 @@
 
-from collections import Counter
+from operator import itemgetter
 from collections.abc import Mapping
 import heapq
-
 
 # extra methods to tack on to set to make it "act" like a list.
 extra_set_methods = {"append": lambda self, value: self.add(value),
                      "extend": lambda self, sequence: self.update(set(sequence))}
-
-
-def counter_append(self, value):
-    self[value] += 1
-
-
-# extra methods to tack on to Mapping to make it "act" like a list.
-extra_counter_methods = {"append": counter_append,
-                         "extend": lambda self, sequence: self.update(sequence)}
 
 
 class Grouping(dict):
@@ -25,7 +15,7 @@ class Grouping(dict):
     The values in the dict are a list of all items that have
     corresponded to a given key
 
-    essentially, adding an new item is the same as:
+    essentially, adding a new item is the same as:
 
     dict.setdefault(key, []).append(value)
 
@@ -39,50 +29,63 @@ class Grouping(dict):
     key, and the value is a new list with the single entry of the value in it.
 
     The __init__ (and update) can take either a mapping of keys to lists,
-    or an iterable of (key, value) tuples.
-
-    If the initial data is not in exactly the form desired, an generator
-    expression can be used to "transform" the input.
-
-    For example:
-
-        >>> Grouping(((c.casefold(), c) for c in 'AbBa'))
-        Grouping({'a': ['A', 'a'], 'b': ['b', 'B']})
+    or an iterable of items.
     """
 
-    def __init__(self, iterable=(), *, collection=list):
+    def __init__(self, iterable=(), key_fun=None, value_fun=None):
         """
         Create a new Grouping object.
 
         :param iterable: an iterable or mapping with initial data.
 
+        :param key_fun=None: key function -- if specified, then the key will be
+                             whatever the function returns for each item in the
+                             iterable.
+
+        :param value_fun=None: value function -- if specified, then the value
+                               will be whatever the function returns for each
+                               item in the iterable.
+
+         If neither key_fun nor value_fun are specified, then the items in the
+         iterable are processes as (key, value) pairs. (item[0], item[1]))
+
+         If only a key_fun is specified, then the value is the entire item.
+
+         If only a value_fun is specified, then the key is item[0]
+
         """
-        if hasattr(collection, "append") and hasattr(collection, "extend"):
-            self.collection = list
-        elif hasattr(collection, "add") and hasattr(collection, "update"):
-            # this is very kludgy -- adding append and extend methods to a
-            # set or set-like object
-            self.collection = type("appendset", (set,), extra_set_methods)
-        # Counter is special
-        elif issubclass(collection, Counter):
-            # has an update, doesn't have an add -- a counter-like?
-            self.collection = type("appendcounter", (Counter,), extra_counter_methods)
+        if key_fun is None:
+            self.key_fun = itemgetter(0)
+            if value_fun is None:
+                self.value_fun = itemgetter(1)
+            else:
+                self.value_fun = value_fun
         else:
-            raise TypeError("collection has to be a MutableSequence or set-like object")
+            self.key_fun = key_fun
+            if value_fun is None:
+                self.value_fun = lambda x: x
+            else:
+                self.value_fun = value_fun
+
+
         super().__init__()
         self.update(iterable)
 
     # Override a few dict methods
-
     def __setitem__(self, key, value):
-        self.setdefault(key, self.collection()).append(value)
+        self.setdefault(key, list()).append(value)
 
     def __repr__(self):
         return f"Grouping({super().__repr__()})"
 
+    def add(self, item):
+        """
+        add a new item to the grouping the key_fun and value_fun
+        used when crating teh gropuing will be used.
+        """
     @classmethod
-    def fromkeys(cls, iterable, v=()):
-        return cls(dict.fromkeys(iterable, self.collection(v)))
+    def fromkeys(cls, iterable):
+        return cls(dict.fromkeys(iterable, list()))
 
     def update(self, iterable=(), key=None):
         '''Extend groups with elements from an iterable or with
@@ -98,10 +101,10 @@ class Grouping(dict):
         '''
         if isinstance(iterable, Mapping):
             for k, g in iterable.items():
-                self.setdefault(k, self.collection()).extend(g)
+                self.setdefault(k, list()).extend(g)
         else:
-            for k, g in iterable:
-                self[k] = g
+            for item in iterable:
+                self[self.key_fun(item)] = self.value_fun(item)
 
     def map(self, func):
         """
