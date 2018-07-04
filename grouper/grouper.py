@@ -67,7 +67,6 @@ class Grouping(dict):
             else:
                 self.value_fun = value_fun
 
-
         super().__init__()
         self.update(iterable)
 
@@ -80,14 +79,16 @@ class Grouping(dict):
 
     def add(self, item):
         """
-        add a new item to the grouping the key_fun and value_fun
-        used when crating teh gropuing will be used.
+        add a new item to the grouping. The key_fun and value_fun
+        used when creating the grouping will be used.
         """
+        self[self.key_fun(item)] = self.value_fun(item)
+
     @classmethod
     def fromkeys(cls, iterable):
         return cls(dict.fromkeys(iterable, list()))
 
-    def update(self, iterable=(), key=None):
+    def update(self, iterable=()):
         '''Extend groups with elements from an iterable or with
         key-group items from a dictionary or another Grouping instance.
 

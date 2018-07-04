@@ -51,6 +51,16 @@ def test_example_loop():
     assert gr['SchoolC'] == ['Nancy']
 
 
+def test_add_key_value():
+    gr = Grouping(key_fun=len, value_fun=str.capitalize)
+
+    gr.add("fred")
+    gr.add("bob")
+    gr.add("mary")
+
+    assert gr == {4: ['Fred', 'Mary'], 3: ['Bob']}
+
+
 def test_constructor_list():
     """
     Trying to be as similar to the dict constructor as possible:
